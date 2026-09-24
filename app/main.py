@@ -4,9 +4,8 @@ from contextlib import asynccontextmanager
 from typing import Dict, Any, Optional
 import httpx
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from app.config import AppConfig, load_config, save_config, add_log, recent_logs
@@ -32,8 +31,10 @@ app = FastAPI(
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+INDEX_FILE = os.path.join(BASE_DIR, "templates", "index.html")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Request Models
 class ConfigUpdateRequest(BaseModel):
@@ -53,15 +54,17 @@ class TestTelegramRequest(BaseModel):
     chat_id: Optional[str] = None
 
 
-@app.get("/", response_class=HTMLResponse)
-async def serve_index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+@app.get("/")
+async def serve_index():
+    if not os.path.exists(INDEX_FILE):
+        return HTMLResponse("<h3>index.html not found</h3>", status_code=404)
+    return FileResponse(INDEX_FILE, media_type="text/html")
 
 
 @app.get("/api/config")
 async def get_config():
     cfg = load_config()
-    return cfg.model_dump()
+    return cfg.model_dump() if hasattr(cfg, "model_dump") else cfg.dict()
 
 
 @app.post("/api/config")

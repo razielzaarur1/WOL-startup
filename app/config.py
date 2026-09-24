@@ -70,6 +70,7 @@ def load_config() -> AppConfig:
 
 def save_config(cfg: AppConfig):
     os.makedirs(DATA_DIR, exist_ok=True)
+    dumped = cfg.model_dump() if hasattr(cfg, "model_dump") else cfg.dict()
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg.model_dump(), f, indent=2, ensure_ascii=False)
+        json.dump(dumped, f, indent=2, ensure_ascii=False)
     add_log("INFO", "ההגדרות נשמרו בהצלחה")
