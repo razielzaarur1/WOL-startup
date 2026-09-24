@@ -1,0 +1,17 @@
+services:
+  wol-telegram-server:
+    build: .
+    container_name: wol-telegram-server
+    restart: unless-stopped
+    ports:
+      - "7892:7892"
+    # הערה חשובה ל-Wake-on-LAN:
+    # בשרתי Linux / Raspberry Pi / HomeLab מומלץ להפעיל network_mode: host
+    # כדי שחבילות ה-Broadcast יצאו ישירות לרשת הפיזית.
+    # אם מבטלים את ההערה של network_mode: host, יש להוסיף סולמית לפני בלוק ה-ports למעלה.
+    # network_mode: host
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATA_DIR=/app/data

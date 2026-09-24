@@ -132,7 +132,8 @@ class TelegramBotManager:
                             f"חלפו {cfg.ping_timeout} שניות והמחשב (`{cfg.target_ip}`) עדיין אינו מגיב ל-Ping.\n"
                             f"💡 ייתכן שהמחשב עדיין עולה, או שחומת האש (Windows Firewall) חוסמת פינגים."
                         )
-                    await context.bot.send_message(
+                    bot_to_use = self.application.bot if self.application else context.bot
+                    await bot_to_use.send_message(
                         chat_id=chat_id,
                         text=notification,
                         reply_markup=self._get_main_keyboard(),
