@@ -40,16 +40,23 @@ class HostMonitor:
         except Exception:
             pass
 
-        # 2. Try TCP fallback if configured or if ICMP blocked
+        # 2. Try TCP probing (configured port and common Windows ports: 135, 445, 139, 3389)
+        ports_to_try = []
         if tcp_fallback_port and tcp_fallback_port > 0:
+            ports_to_try.append(tcp_fallback_port)
+        for p in [135, 445, 139, 3389, 5357, 80]:
+            if p not in ports_to_try:
+                ports_to_try.append(p)
+
+        for port in ports_to_try:
             try:
-                fut = asyncio.open_connection(target_ip, tcp_fallback_port)
-                _, writer = await asyncio.wait_for(fut, timeout=timeout_sec)
+                fut = asyncio.open_connection(target_ip, port)
+                _, writer = await asyncio.wait_for(fut, timeout=0.6)
                 writer.close()
                 await writer.wait_closed()
                 return True
             except Exception:
-                return False
+                continue
 
         return False
 
