@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wake-on-LAN & Telegram Controller</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Rubik', 'Segoe UI', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-blue-600 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white font-bold text-xl">
+          ⚡
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            WOL & Telegram Controller
+            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">פורט 7892</span>
+          </h1>
+          <p class="text-xs text-slate-400">ניהול והדלקת מחשב מרחוק באמצעות Wake-on-LAN ובוט טלגרם</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="btnQuickWake" onclick="triggerWake()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition text-white text-sm font-medium flex items-center gap-2 shadow-lg shadow-emerald-600/20">
+          <span>⚡</span>
+          <span>הער מחשב עכשיו</span>
+        </button>
+        <button onclick="refreshStatus()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm transition flex items-center gap-1.5 border border-slate-700">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>רענן</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- Top Alert / Message Banner -->
+    <div id="toastContainer" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
+
+    <!-- Status Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- PC Status Card -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <div>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">סטטוס מחשב יעד</span>
+            <h3 id="pcStatusText" class="text-2xl font-bold mt-1 text-slate-300 flex items-center gap-2">
+              <span id="pcStatusDot" class="inline-block w-3 h-3 rounded-full bg-slate-500"></span>
+              <span id="pcStatusLabel">טוען...</span>
+            </h3>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-800/80 text-blue-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/70 text-xs text-slate-400 flex justify-between items-center">
+          <span id="pcStatusDetails">IP: לא מוגדר</span>
+          <button onclick="testPingHost()" class="text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+            <span>בדיקת פינג</span> &larr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Telegram Bot Status Card -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <div>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">בוט טלגרם</span>
+            <h3 id="botStatusText" class="text-xl font-bold mt-1 text-slate-300 flex items-center gap-2">
+              <span id="botStatusDot" class="inline-block w-3 h-3 rounded-full bg-amber-500"></span>
+              <span id="botStatusLabel">מאתחל...</span>
+            </h3>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-800/80 text-indigo-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/70 text-xs text-slate-400 flex justify-between items-center">
+          <span id="botUsernameText">ממתין להגדרה</span>
+          <button onclick="testTelegramMessage()" class="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+            <span>שלח הודעת בדיקה</span> &larr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Last Wake Activity Card -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <div>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">הדלקה אחרונה</span>
+            <h3 id="lastWakeText" class="text-lg font-bold mt-1 text-slate-200">
+              טרם בוצעה
+            </h3>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-800/80 text-emerald-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/70 text-xs text-slate-400 flex justify-between items-center">
+          <span id="lastWakeTime">-</span>
+          <span id="lastWakeDuration" class="font-mono text-emerald-400"></span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main Grid: Configuration Form & Logs / Guide -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Configuration Form (7 cols) -->
+      <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-5 border-b border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>⚙️</span> הגדרות חיבור ורשת
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">הגדר את פרטי הטלגרם, כתובת ה-MAC ופרמטרי הרשת עבור ה-Wake-on-LAN</p>
+          </div>
+          <span class="text-xs text-slate-500 bg-slate-800 px-2.5 py-1 rounded-md">שמירה אוטומטית / ידנית</span>
+        </div>
+
+        <form id="configForm" onsubmit="saveConfiguration(event)" class="space-y-4">
+          
+          <!-- Telegram Section -->
+          <div class="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+            <h3 class="text-sm font-semibold text-blue-400 flex items-center gap-1.5">
+              <span>📱</span> הגדרות טלגרם
+            </h3>
+            
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1" for="telegram_token">
+                Telegram Bot Token
+                <span class="text-red-400">*</span>
+              </label>
+              <div class="relative">
+                <input type="password" id="telegram_token" name="telegram_token" placeholder="למשל: 123456789:ABCdefGhIJKlmNoPQRstuvwxYZ" 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono">
+                <button type="button" onclick="togglePasswordVisibility('telegram_token')" class="absolute left-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-200">
+                  הצג
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1">נוצר ע"י שליחת <code>/newbot</code> לבוט <strong>@BotFather</strong> בטלגרם.</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1" for="allowed_chat_ids">
+                Allowed Chat ID / User ID
+                <span class="text-slate-500">(הגבלת גישה לבוט)</span>
+              </label>
+              <input type="text" id="allowed_chat_ids" name="allowed_chat_ids" placeholder="למשל: 123456789 (ניתן להפריד בפסיקים לכמה משתמשים)" 
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono">
+              <p class="text-[11px] text-slate-500 mt-1">
+                מזהה השיחה שלך. אם אינך יודע אותו, שלח <code>/start</code> לבוט שלך והוא יציג לך את ה-ID!
+              </p>
+            </div>
+          </div>
+
+          <!-- Wake-on-LAN Target Section -->
+          <div class="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+            <h3 class="text-sm font-semibold text-emerald-400 flex items-center gap-1.5">
+              <span>🖥️</span> מחשב היעד ו-Wake-on-LAN
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1" for="mac_address">
+                  כתובת MAC של המחשב
+                  <span class="text-red-400">*</span>
+                </label>
+                <input type="text" id="mac_address" name="mac_address" placeholder="AA:BB:CC:DD:EE:FF" 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono uppercase" required>
+                <p class="text-[11px] text-slate-500 mt-1">ניתן למצוא ע"י <code>getmac</code> או <code>ipconfig /all</code> במחשב.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1" for="target_ip">
+                  כתובת IP של המחשב (לניטור)
+                  <span class="text-slate-400 text-[10px]">(מומלץ IP קבוע)</span>
+                </label>
+                <input type="text" id="target_ip" name="target_ip" placeholder="192.168.1.100" 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono">
+                <p class="text-[11px] text-slate-500 mt-1">משמש לבדיקת Ping לווידוא שהמחשב נדלק.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1" for="broadcast_ip">
+                  כתובת Broadcast
+                </label>
+                <input type="text" id="broadcast_ip" name="broadcast_ip" value="255.255.255.255" 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono">
+                <p class="text-[11px] text-slate-500 mt-1">בדרך כלל <code>255.255.255.255</code> או תת-רשת כגון <code>192.168.1.255</code>.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1" for="wol_port">
+                  פורט WOL UDP
+                </label>
+                <input type="number" id="wol_port" name="wol_port" value="9" min="1" max="65535" 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono">
+                <p class="text-[11px] text-slate-500 mt-1">ברירת מחדל: 9 (או 7).</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced / Timing Settings Collapsible -->
+          <details class="bg-slate-950/40 rounded-xl border border-slate-800/60 p-3 group">
+            <summary class="cursor-pointer text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center justify-between">
+              <span>⏱️ הגדרות ניטור מתקדמות (זמנים וחלופות)</span>
+              <span class="text-slate-500 group-open:rotate-180 transition">&darr;</span>
+            </summary>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-slate-800">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1" for="ping_timeout">
+                  זמן המתנה מקסימלי (שניות)
+                </label>
+                <input type="number" id="ping_timeout" name="ping_timeout" value="90" min="10" max="300" 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 font-mono">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1" for="ping_interval">
+                  תדירות בדיקה (שניות)
+                </label>
+                <input type="number" id="ping_interval" name="ping_interval" value="3" min="1" max="30" 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 font-mono">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1" for="tcp_fallback_port">
+                  פורט TCP חלופי לבדיקה
+                </label>
+                <input type="number" id="tcp_fallback_port" name="tcp_fallback_port" value="0" min="0" max="65535" 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 font-mono" placeholder="0 = כבוי">
+                <p class="text-[10px] text-slate-500 mt-0.5">אם Ping חסום ב-Firewall, נסה 445 או 3389</p>
+              </div>
+            </div>
+          </details>
+
+          <!-- Buttons -->
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" id="btnSave" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 px-4 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              <span>שמור הגדרות והפעל מחדש בוט</span>
+            </button>
+            <button type="button" onclick="testTelegramConnection()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition text-sm flex items-center gap-1.5">
+              <span>בדיקת טלגרם</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Right Column: Live Logs & Quick Guide (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- Activity Log Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>יומן פעילות בזמן אמת (Live Logs)</span>
+            </h3>
+            <button onclick="fetchLogs()" class="text-xs text-slate-400 hover:text-slate-200">
+              רענן
+            </button>
+          </div>
+
+          <div id="logsContainer" class="bg-slate-950/80 rounded-xl p-3 h-64 overflow-y-auto font-mono text-[11px] space-y-1.5 border border-slate-800/80 scrollbar-thin">
+            <div class="text-slate-500 text-center py-8">טוען יומן...</div>
+          </div>
+        </div>
+
+        <!-- Quick Help Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <span>💡</span> מדריך מהיר להפעלה
+          </h3>
+
+          <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+            <div class="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800">
+              <strong class="text-blue-400 block mb-1">1. איך פותחים בוט בטלגרם?</strong>
+              כנסו ל-<strong>@BotFather</strong> בטלגרם, שלחו <code>/newbot</code>, בחרו שם וכינוי, וקבלו את ה-Token. הדביקו אותו בשדה למעלה.
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800">
+              <strong class="text-indigo-400 block mb-1">2. איך מוצאים Chat ID?</strong>
+              אחרי שמירת הטוקן, חפשו את הבוט שלכם בטלגרם ושלחו לו <code>/start</code>. הבוט ישיב לכם מיד עם ה-Chat ID שלכם! העתיקו אותו להגדרות לשמירה על אבטחה.
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800">
+              <strong class="text-emerald-400 block mb-1">3. מה צריך להגדיר במחשב?</strong>
+              ב-Windows: במנהל ההתקנים &larr; מאפייני כרטיס רשת &larr; Power Management &larr; סמנו <em>"Allow this device to wake the computer"</em> ו-<em>"Only allow a magic packet"</em>. ב-BIOS: ודאו ש-Wake On LAN / PCIe Wake מופעל.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="mt-12 py-6 border-t border-slate-800/60 text-center text-xs text-slate-500">
+    שרת Wake-on-LAN מבוסס Docker | מאזין בפורט 7892
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
