@@ -7,6 +7,9 @@ RUN apt-get update && \
 
 WORKDIR /app
 
+# Upgrade pip first so it can download modern pre-built binary wheels (manylinux)
+RUN pip install --no-cache-dir --upgrade pip
+
 # Copy dependency specifications
 COPY requirements.txt .
 
