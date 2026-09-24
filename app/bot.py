@@ -100,7 +100,7 @@ class TelegramBotManager:
             return
 
         # Send WOL packet
-        success, msg = send_wol_packet(cfg.mac_address, cfg.broadcast_ip, cfg.wol_port)
+        success, msg = send_wol_packet(cfg.mac_address, cfg.broadcast_ip, cfg.wol_port, cfg.target_ip)
         if not success:
             await update.effective_message.reply_text(f"❌ שגיאה בשליחת פקט ההתעוררות: {msg}")
             return

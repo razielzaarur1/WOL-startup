@@ -132,7 +132,7 @@ async def trigger_wake():
     if not cfg.mac_address:
         raise HTTPException(status_code=400, detail="טרם הוגדרה כתובת MAC בהגדרות")
 
-    success, msg = send_wol_packet(cfg.mac_address, cfg.broadcast_ip, cfg.wol_port)
+    success, msg = send_wol_packet(cfg.mac_address, cfg.broadcast_ip, cfg.wol_port, cfg.target_ip)
     if not success:
         raise HTTPException(status_code=500, detail=msg)
 
